@@ -7,7 +7,7 @@
 // STL
 #include <iostream>
 
-using namespace evgp_car::servos;
+using namespace evgp_cart::servos;
 
 ClearPathHubManager::ClearPathHubManager()
     : _manager(sFnd::SysManager::Instance())
@@ -23,8 +23,8 @@ ClearPathHubManager::ClearPathHubManager()
 
     // Set up the port to the hub
     _manager->ComHubPort(1, _portNames[0].c_str());
-    _port = myMgr->Ports(0);
+    sFnd::IPort& port = _manager->Ports(0);
 
     // Print debug info for the port
-    std::cout << "Port state: " << _port.OpenState() << "\nNode count: " << _port.NodeCount() << std::endl;
+    std::cout << "Port state: " << port.OpenState() << "\nNode count: " << port.NodeCount() << std::endl;
 }

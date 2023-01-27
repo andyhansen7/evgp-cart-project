@@ -35,9 +35,6 @@ namespace evgp_cart::servos
         // Manager instance
         sFnd::SysManager* _manager;
 
-        // Port instance
-        sFnd::IPort& _port;
-
         // Port names found by the hub
         std::vector<std::string> _portNames;
 

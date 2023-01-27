@@ -9,6 +9,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -pthread -Wall -Wextra")
 
 # Add all libraries to the include path
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/src" )
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/admin/clearpath_hub/inc/inc-pub")
 
 ### Send all executables to build/[debug|release]/bin
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

@@ -8,10 +8,10 @@ sudo usermod -aG dialout "$(whoami)"
 sudo apt install linux-headers-"$(uname -r)" -y
 
 # Extract the tar package
-rm -rf temp
-mkdir temp
-tar -xf teknic_clearpath_sc_sdk.tar.gz --directory ./temp/
-cd temp || exit
+rm -rf clearpath_hub
+mkdir clearpath_hub
+tar -xf teknic_clearpath_sc_sdk.tar.gz --directory ./clearpath_hub/
+cd clearpath_hub || exit
 tar -xvf sFoundation.tar
 cd sFoundation || exit
 echo "Done inflating archives, building project"
@@ -30,8 +30,7 @@ sudo chmod +777 Install_DRV_SCRIPT.sh
 echo "Done setting up driver directory. Note that hub must be plugged in to continue!"
 
 # Run the provided setup script
-sudo su
-./Install_DRV_SCRIPT.sh
+sudo ./Install_DRV_SCRIPT.sh
 
 exit 0
 
