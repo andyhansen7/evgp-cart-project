@@ -11,9 +11,13 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -pthread -Wall -Wextra")
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/src" )
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/admin/clearpath_hub/inc/inc-pub")
 
-### Send all executables to build/[debug|release]/bin
+# Send all executables to build/[debug|release]/bin
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-### Targets
+# Link Teknic's built library
+add_library(sFoundation SHARED IMPORTED)
+set_target_properties(sFoundation PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/admin/clearpath_hub/sFoundation/libsFoundation20.so)
+
+# Targets
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src")
 add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/run" )

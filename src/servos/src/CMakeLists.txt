@@ -3,3 +3,9 @@ add_library(
 
     ClearPathHubManager.cpp
 )
+
+target_link_libraries(
+    Servos
+
+    sFoundation
+)
