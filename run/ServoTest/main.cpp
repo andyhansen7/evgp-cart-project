@@ -68,6 +68,7 @@ int main()
         manager->moveToPositionAbsolute(1, pos1);
 
         // Print
+        std::cout << "\x1B[2J\x1B[H";
         std::cout << "Servo 0 position: " << manager->getPositionAbsolute(0) << std::endl;
         std::cout << "Servo 1 position: " << manager->getPositionAbsolute(1) << std::endl;
 
