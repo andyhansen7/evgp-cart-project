@@ -25,12 +25,17 @@ namespace evgp_project::vesc
 
         ~VESC();
 
+        unsigned long getPings() { return _pingCount; }
+        unsigned long getPongs() { return _pongCount; }
+
     private:
         std::shared_ptr<CANBus> _canbus;
         const unsigned _canID;
 
         std::atomic<bool> _pingPongThreadRunning;
         std::thread _pingPongThread;
+        std::atomic<unsigned long> _pingCount;
+        std::atomic<unsigned long> _pongCount;
 
         // Helper to run ping pong to the controller
         void pingPong();
@@ -52,7 +57,7 @@ namespace evgp_project::vesc
         // Helper to build a CAN frame ID
         static inline uint32_t buildCANExtendedID(const uint32_t frameID, const uint32_t deviceID)
         {
-            return (frameID | deviceID | CAN_EFF_FLAG);
+            return ((frameID << 8) | deviceID | CAN_EFF_FLAG);
         }
     };
 }

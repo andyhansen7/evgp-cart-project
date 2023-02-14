@@ -39,7 +39,7 @@ struct BasicRead
 class CANBus
 {
 public:
-    CANBus(std::string interface);
+    explicit CANBus(std::string interface);
     ~CANBus();
 
     CANBus(const CANBus& other) = delete;

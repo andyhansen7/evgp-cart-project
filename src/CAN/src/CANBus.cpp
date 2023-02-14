@@ -104,11 +104,11 @@ void CANBus::getIncomingFrames()
         if (reading.isValid)
         {
             // Check if payload is correct size
-            if (reading.frame.can_dlc != 8)
-            {
-                std::cout << "Received CAN message (canID: " << reading.frame.can_id << ") with payload size " << reading.frame.can_dlc << ". (should be 8)" << std::endl;
-                return;
-            }
+//            if (reading.frame.can_dlc != 8)
+//            {
+//                std::cout << "Received CAN message (canID: " << reading.frame.can_id << ") with payload size " << reading.frame.can_dlc << ". (should be 8)" << std::endl;
+//                continue;
+//            }
 
             // Packet age check
             auto difference = std::chrono::duration_cast<std::chrono::milliseconds>(

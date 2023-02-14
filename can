@@ -1,0 +1,6 @@
+00000930 status 1 -> id | (header << 8)
+00000E30 status 2
+00000F30 status 3
+00001030 status 4
+
+9 << 8 | id
