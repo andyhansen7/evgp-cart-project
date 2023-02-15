@@ -42,7 +42,128 @@ VESC::VESC(std::shared_ptr<CANBus> canbus, const uint8_t canID)
     // Subscribe to status frames
     _canbus->subscribeFrameID(vesc::buildCANExtendedID(vesc::CANMessages::Status1, _canID), [this](const can_frame& frame)
     {
+        uint32_t rawRPM = 0;
+        uint32_t rawCurrent = 0;
+        uint32_t rawDutyCycle = 0;
 
+        rawRPM |= frame.data[0] << 24;
+        rawRPM |= frame.data[1] << 16;
+        rawRPM |= frame.data[2] << 8;
+        rawRPM |= frame.data[3];
+
+        rawCurrent |= frame.data[4] << 8;
+        rawCurrent |= frame.data[5];
+
+        rawDutyCycle |= frame.data[6] << 8;
+        rawDutyCycle |= frame.data[7];
+
+        auto rpm = static_cast<float>(rawRPM);
+        float current = static_cast<float>(rawCurrent) / static_cast<float>(1e1);
+        float dutyCycle = static_cast<float>(rawDutyCycle) / static_cast<float>(1e3);
+
+        std::scoped_lock lock(_statusFrame1Mutex);
+        _rpm = rpm;
+        _current_A = current;
+        _dutyCycle_percent = dutyCycle;
+    });
+
+    _canbus->subscribeFrameID(vesc::buildCANExtendedID(vesc::CANMessages::Status2, _canID), [this](const can_frame& frame)
+    {
+        uint32_t rawAmpHours = 0;
+        uint32_t rawAmpHoursCharged = 0;
+
+        rawAmpHours |= frame.data[0] << 24;
+        rawAmpHours |= frame.data[1] << 16;
+        rawAmpHours |= frame.data[2] << 8;
+        rawAmpHours |= frame.data[3];
+
+        rawAmpHoursCharged |= frame.data[4] << 24;
+        rawAmpHoursCharged |= frame.data[5] << 16;
+        rawAmpHoursCharged |= frame.data[6] << 8;
+        rawAmpHoursCharged |= frame.data[7];
+
+        float ampHours = static_cast<float>(rawAmpHours) / static_cast<float>(1e4);
+        float ampHoursCharged = static_cast<float>(rawAmpHoursCharged) / static_cast<float>(1e4);
+
+        std::scoped_lock lock(_statusFrame2Mutex);
+        _totalConsumedAmpHours = ampHours;
+        _totalRechargedAmpHours = ampHoursCharged;
+    });
+
+    _canbus->subscribeFrameID(vesc::buildCANExtendedID(vesc::CANMessages::Status3, _canID), [this](const can_frame& frame)
+    {
+        uint32_t rawConsumedWattHours = 0;
+        uint32_t rawChargedWattHours = 0;
+
+        rawConsumedWattHours |= frame.data[0] << 24;
+        rawConsumedWattHours |= frame.data[1] << 16;
+        rawConsumedWattHours |= frame.data[2] << 8;
+        rawConsumedWattHours |= frame.data[3];
+
+        rawChargedWattHours |= frame.data[4] << 24;
+        rawChargedWattHours |= frame.data[5] << 16;
+        rawChargedWattHours |= frame.data[6] << 8;
+        rawChargedWattHours |= frame.data[7];
+
+        float wattHours = static_cast<float>(rawConsumedWattHours) / static_cast<float>(1e4);
+        float wattHoursCharged = static_cast<float>(rawChargedWattHours) / static_cast<float>(1e4);
+
+        std::scoped_lock lock(_statusFrame3Mutex);
+        _totalConsumedWattHours = wattHours;
+        _totalRechargedWattHours = wattHoursCharged;
+    });
+
+    _canbus->subscribeFrameID(vesc::buildCANExtendedID(vesc::CANMessages::Status4, _canID), [this](const can_frame& frame)
+    {
+        uint32_t rawMosfetTemperature = 0;
+        uint32_t rawMotorTemperature = 0;
+        uint32_t rawFilteredCurrent = 0;
+        uint32_t rawPIDPosition = 0;
+
+        rawMosfetTemperature |= frame.data[0] << 8;
+        rawMosfetTemperature |= frame.data[1];
+
+        rawMotorTemperature |= frame.data[2] << 8;
+        rawMotorTemperature |= frame.data[3];
+
+        rawFilteredCurrent |= frame.data[4] << 8;
+        rawFilteredCurrent |= frame.data[5];
+
+        rawPIDPosition |= frame.data[6] << 8;
+        rawPIDPosition |= frame.data[7];
+
+        float mosfetTemperature = static_cast<float>(rawMosfetTemperature) / static_cast<float>(1e1);
+        float motorTemperature = static_cast<float>(rawMotorTemperature) / static_cast<float>(1e1);
+        float filteredCurrent = static_cast<float>(rawFilteredCurrent) / static_cast<float>(1e1);
+        float pidPosition = static_cast<float>(rawPIDPosition) / static_cast<float>(50);
+
+
+        std::scoped_lock lock(_statusFrame4Mutex);
+        _mosfetTemperature = mosfetTemperature;
+        _motorTemperature = motorTemperature;
+        _totalFilteredMotorCurrentA = filteredCurrent;
+        _pidPosition = pidPosition;
+    });
+
+    _canbus->subscribeFrameID(vesc::buildCANExtendedID(vesc::CANMessages::Status5, _canID), [this](const can_frame& frame)
+    {
+        uint32_t rawTachometerValue = 0;
+        uint32_t rawInputvoltage = 0;
+
+        rawTachometerValue |= frame.data[0] << 24;
+        rawTachometerValue |= frame.data[1] << 16;
+        rawTachometerValue |= frame.data[2] << 8;
+        rawTachometerValue |= frame.data[3];
+
+        rawInputvoltage |= frame.data[4] << 8;
+        rawInputvoltage |= frame.data[5];
+
+        auto tachometerValue = static_cast<float>(rawTachometerValue);
+        float inputVoltage = static_cast<float>(rawInputvoltage) / static_cast<float>(1e1);
+
+        std::scoped_lock lock(_statusFrame5Mutex);
+        _tachometerValue = tachometerValue;
+        _inputVoltage = inputVoltage;
     });
 
     _pingPongThread = std::thread([this](){ pingPong(); });
@@ -99,7 +220,7 @@ float VESC::getTotalAmpHoursRecharged() const
 float VESC::getTotalConsumedWattHours() const
 {
     std::scoped_lock lock(_statusFrame3Mutex);
-    return _totalRechargedWattHours;
+    return _totalConsumedWattHours;
 }
 
 float VESC::getTotalWattHoursRecharged() const
