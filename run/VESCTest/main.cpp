@@ -27,36 +27,207 @@ int main()
 
     static constexpr unsigned vescID = 48;
 
-//    const auto bus = std::make_shared<can::CANBus>("can0");
-//    const auto vesc = std::make_shared<vesc::VESC>(bus, vescID);
-//
+    const auto bus = std::make_shared<can::CANBus>("can0");
+    const auto vesc = std::make_shared<vesc::VESC>(bus, vescID);
+
+    float pwmTarget = 0.0f;
+    const float pwmIncrement = 0.1f;
+    const float pwmMax = 1.0f;
+    const float pwmMin = -1.0f;
+
+    float rpmTarget = 0.0f;
+    float rpmIncrement = 100.0f;
+    float rpmMax = 1000.0f;
+    float rpmMin = -1000.0f;
+
+    gui::GUIEntry setPWM = {
+        .name = "PWM Target",
+        .precision = 6,
+        .value = [&]() {
+            return pwmTarget;
+        }
+    };
+
+    gui::GUIEntry setRPM = {
+        .name = "RPM Target",
+        .precision = 6,
+        .value = [&]() {
+            return rpmTarget;
+        }
+    };
+
+    gui::GUIEntry responseRate = {
+        .name = "Response (%)",
+        .precision = 6,
+        .value = [&]() {
+            return static_cast<float>(vesc->getPongs()) / static_cast<float>(vesc->getPings());
+        }
+    };
+
     gui::GUIEntry rpm = {
         .name = "RPM",
         .precision = 6,
-        .value = []() {
-            return 1.0f;
+        .value = [&]() {
+            return vesc->getRPM();
+        }
+    };
+
+    gui::GUIEntry dutyPercent = {
+        .name = "Duty (%)",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getDutyCycle();
         }
     };
 
     gui::GUIEntry current = {
-            .name = "Current (A)",
-            .precision = 6,
-            .value = []() {
-                return 2.0f;
-            }
+        .name = "Current (A)",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getOutputCurrent();
+        }
+    };
+
+    gui::GUIEntry totalAH = {
+        .name = "Total Power (AH)",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getTotalConsumedAmpHours();
+        }
+    };
+
+    gui::GUIEntry totalWH = {
+        .name = "Total Power (WH)",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getTotalConsumedWattHours();
+        }
+    };
+
+    gui::GUIEntry chargedAH = {
+        .name = "Total Charged (AH)",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getTotalAmpHoursRecharged();
+        }
+    };
+
+    gui::GUIEntry chargedWH = {
+        .name = "Total Charged (WH)",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getTotalWattHoursRecharged();
+        }
+    };
+
+    gui::GUIEntry mosfetTemp = {
+        .name = "MOSFET Temp",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getMosfetTemperature();
+        }
+    };
+
+    gui::GUIEntry motorTemp = {
+        .name = "Motor Temp",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getMotorTemperature();
+        }
+    };
+
+    gui::GUIEntry voltage = {
+        .name = "Input Voltage",
+        .precision = 6,
+        .value = [&]() {
+            return vesc->getInputVoltage();
+        }
     };
 
     gui::KeybindEntry eStop = {
         .key = ' ',
         .description = "Emergency stop",
-        .callback = []()
+        .callback = [&]()
         {
-            std::cout << "Click" << std::endl;
+            vesc->setRPM(0.0f);
         }
     };
 
-    const std::vector<gui::GUIEntry> entries = {rpm, current};
-    const std::vector<gui::KeybindEntry> keybinds = {eStop};
+    gui::KeybindEntry increasePWM = {
+        .key = 'q',
+        .description = "Increase PWM",
+        .callback = [&]()
+        {
+            pwmTarget += pwmIncrement;
+
+            if(pwmTarget > pwmMax)
+                pwmTarget = pwmMax;
+
+            vesc->setPWM(pwmTarget);
+        }
+    };
+
+    gui::KeybindEntry decreasePWM = {
+        .key = 'a',
+        .description = "Decrease PWM",
+        .callback = [&]()
+        {
+            pwmTarget -= pwmIncrement;
+
+            if(pwmTarget < pwmMin)
+                pwmTarget = pwmMin;
+
+            vesc->setPWM(pwmTarget);
+        }
+    };
+
+    gui::KeybindEntry increaseRPM = {
+        .key = 'w',
+        .description = "Increase RPM",
+        .callback = [&]()
+        {
+            rpmTarget += rpmIncrement;
+
+            if(rpmTarget > rpmMax)
+                rpmTarget = rpmMax;
+
+            vesc->setRPM(rpmTarget);
+        }
+    };
+
+    gui::KeybindEntry decreaseRPM = {
+        .key = 's',
+        .description = "Decrease RPM",
+        .callback = [&]()
+        {
+            rpmTarget -= rpmIncrement;
+
+            if(rpmTarget < rpmMin)
+                rpmTarget = rpmMin;
+
+            vesc->setRPM(rpmTarget);
+        }
+    };
+
+    const std::vector<gui::GUIEntry> entries = {setPWM,
+                                                setRPM,
+                                                rpm,
+                                                dutyPercent,
+                                                current,
+                                                totalAH,
+                                                totalWH,
+                                                chargedAH,
+                                                chargedWH,
+                                                mosfetTemp,
+                                                motorTemp,
+                                                voltage};
+
+    const std::vector<gui::KeybindEntry> keybinds = {eStop,
+                                                     increasePWM,
+                                                     decreasePWM,
+                                                     increaseRPM,
+                                                     decreaseRPM};
+
     const auto gui = std::make_shared<gui::SimpleGUI>(entries, keybinds);
 
     while(!interrupted)
