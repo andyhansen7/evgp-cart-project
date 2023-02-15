@@ -18,6 +18,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_library(sFoundation SHARED IMPORTED)
 set_target_properties(sFoundation PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/admin/clearpath_hub/sFoundation/libsFoundation20.so)
 
+# Link ncurses
+find_package(Curses REQUIRED)
+include_directories(${CURSES_INCLUDE_DIR})
+
 # Targets
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src")
 add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/run" )

@@ -4,9 +4,9 @@
 
 #include <CAN/src/CANBus.h>
 #include <VESC/src/VESC.h>
-#include <VESC/src/CANUtils.h>
-#include <VESC/src/CANMessages.h>
+#include <GUI/src/SimpleGUI.h>
 
+// STL
 #include <memory>
 #include <atomic>
 #include <csignal>
@@ -16,24 +16,54 @@ using namespace evgp_project;
 
 std::atomic<bool> interrupted = false;
 
-void signal(int)
+void handler(int)
 {
     interrupted = true;
 }
 
 int main()
 {
-//    const auto bus = std::make_shared<CANBus>("can0");
-//    const auto vesc = std::make_shared<vesc::VESC>(bus, 48);
-//
-//    while(!interrupted)
-//    {
-//        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-//        std::cout << "Sent " << vesc->getPings() << ", received " << vesc->getPongs() << std::endl;
-//    }
+    signal(SIGINT, handler);
 
-    std::cout << std::hex << vesc::buildCANExtendedID(vesc::CANMessages::Pong, 0) << std::endl;
-    std::cout << "0x80001200" << std::endl;
+    static constexpr unsigned vescID = 48;
+
+//    const auto bus = std::make_shared<can::CANBus>("can0");
+//    const auto vesc = std::make_shared<vesc::VESC>(bus, vescID);
+//
+    gui::GUIEntry rpm = {
+        .name = "RPM",
+        .precision = 6,
+        .value = []() {
+            return 1.0f;
+        }
+    };
+
+    gui::GUIEntry current = {
+            .name = "Current (A)",
+            .precision = 6,
+            .value = []() {
+                return 2.0f;
+            }
+    };
+
+    gui::KeybindEntry eStop = {
+        .key = ' ',
+        .description = "Emergency stop",
+        .callback = []()
+        {
+            std::cout << "Click" << std::endl;
+        }
+    };
+
+    const std::vector<gui::GUIEntry> entries = {rpm, current};
+    const std::vector<gui::KeybindEntry> keybinds = {eStop};
+    const auto gui = std::make_shared<gui::SimpleGUI>(entries, keybinds);
+
+    while(!interrupted)
+    {
+        gui->update();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     return 0;
 }
