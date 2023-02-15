@@ -20,32 +20,41 @@ namespace evgp_project::vesc
     class VESC
     {
     public:
-        VESC(std::shared_ptr<CANBus> canbus,
+        VESC(std::shared_ptr<can::CANBus> canbus,
              uint8_t canID);
 
         ~VESC();
 
+        // Set the speed of the motor as PWM [-1, 1]
+        [[maybe_unused]] bool setPWM(float pwm) const;
+
+        // Set the speed of the motor in rpm
+        [[maybe_unused]] bool setRPM(float rpm) const;
+
+        // Set the current brake in amps
+        [[maybe_unused]] bool setCurrentBrake(float amps) const;
+
         // Helper functions for getting the total number of pings sent to the controller, and the number of pongs it sent back
-        unsigned long getPings() const;
-        unsigned long getPongs() const;
+        [[maybe_unused]] unsigned long getPings() const;
+        [[maybe_unused]] unsigned long getPongs() const;
 
         // Getter methods for class members
-        float getRPM() const;
-        float getOutputCurrent() const;
-        float getDutyCycle() const;
-        float getTotalConsumedAmpHours() const;
-        float getTotalAmpHoursRecharged() const;
-        float getTotalConsumedWattHours() const;
-        float getTotalWattHoursRecharged() const;
-        float getMosfetTemperature() const;
-        float getMotorTemperature() const;
-        float getTotalFilteredMotorCurrent() const;
-        float getPIDPosition() const;
-        float getTachometerValue() const;
-        float getInputVoltage() const;
+        [[maybe_unused]] float getRPM() const;
+        [[maybe_unused]] float getOutputCurrent() const;
+        [[maybe_unused]] float getDutyCycle() const;
+        [[maybe_unused]] float getTotalConsumedAmpHours() const;
+        [[maybe_unused]] float getTotalAmpHoursRecharged() const;
+        [[maybe_unused]] float getTotalConsumedWattHours() const;
+        [[maybe_unused]] float getTotalWattHoursRecharged() const;
+        [[maybe_unused]] float getMosfetTemperature() const;
+        [[maybe_unused]] float getMotorTemperature() const;
+        [[maybe_unused]] float getTotalFilteredMotorCurrent() const;
+        [[maybe_unused]] float getPIDPosition() const;
+        [[maybe_unused]] float getTachometerValue() const;
+        [[maybe_unused]] float getInputVoltage() const;
 
     private:
-        std::shared_ptr<CANBus> _canbus;
+        std::shared_ptr<can::CANBus> _canbus;
         const uint8_t _canID;
 
         // Ping-pong
@@ -81,7 +90,6 @@ namespace evgp_project::vesc
         mutable std::mutex _statusFrame5Mutex;
         float _tachometerValue;
         float _inputVoltage;
-
 
         // Helper to run ping pong to the controller
         void pingPong();

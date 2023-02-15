@@ -18,7 +18,7 @@ namespace evgp_project::vesc
      * @param deviceID the ID of the device to target with the messages
      * @return the created header
      */
-    static inline uint32_t buildCANExtendedID(const uint32_t frameID, const uint32_t deviceID)
+    [[maybe_unused]] static inline uint32_t buildCANExtendedID(const uint32_t frameID, const uint32_t deviceID)
     {
         return ((frameID << 8) | deviceID | CAN_EFF_FLAG);
     }
@@ -30,14 +30,14 @@ namespace evgp_project::vesc
      * @param byte0-7 data as a set of bytes
      * @return a vector of length 8 containing the provided data
      */
-    static std::vector<uint8_t> buildCANFramePayload(const uint8_t byte7,
-                                                     const uint8_t byte6,
-                                                     const uint8_t byte5,
-                                                     const uint8_t byte4,
-                                                     const uint8_t byte3,
-                                                     const uint8_t byte2,
-                                                     const uint8_t byte1,
-                                                     const uint8_t byte0)
+    [[maybe_unused]] static std::vector<uint8_t> buildCANFramePayload(const uint8_t byte7,
+                                                                      const uint8_t byte6,
+                                                                      const uint8_t byte5,
+                                                                      const uint8_t byte4,
+                                                                      const uint8_t byte3,
+                                                                      const uint8_t byte2,
+                                                                      const uint8_t byte1,
+                                                                      const uint8_t byte0)
     {
         std::vector<uint8_t> vec;
         vec.resize(8);
@@ -56,10 +56,10 @@ namespace evgp_project::vesc
 
     /** Helper methods to apply bit masks so that they do not have to be done manually.
      */
-    static inline uint8_t byte0(const uint32_t data) { return data & 0xF; }
-    static inline uint8_t byte1(const uint32_t data) { return (data >> 8) & 0xF; }
-    static inline uint8_t byte2(const uint32_t data) { return (data >> 16) & 0xF; }
-    static inline uint8_t byte3(const uint32_t data) { return (data >> 24) & 0xF; }
+    [[maybe_unused]] static inline uint8_t byte0(const uint32_t data) { return data & 0xF; }
+    [[maybe_unused]] static inline uint8_t byte1(const uint32_t data) { return (data >> 8) & 0xF; }
+    [[maybe_unused]] static inline uint8_t byte2(const uint32_t data) { return (data >> 16) & 0xF; }
+    [[maybe_unused]] static inline uint8_t byte3(const uint32_t data) { return (data >> 24) & 0xF; }
 
     /** Helper function to apply a fixed multiplier to a value, used by the VESC to
      *  emulate the functionality of floating-point values without actually serializing
@@ -70,9 +70,9 @@ namespace evgp_project::vesc
      *
      *  @return the data as a 32-bit unsigned number
      */
-     static inline uint32_t applyFactor(const float data, const uint32_t factor)
+    [[maybe_unused]] static inline uint32_t applyFactor(const float data, const uint32_t factor)
     {
-         return static_cast<uint32_t>(data * factor);
+         return static_cast<uint32_t>(data * static_cast<float>(factor));
     }
 }
 

@@ -7,6 +7,7 @@
 // STL
 #include <iostream>
 
+using namespace evgp_project::can;
 using namespace std::chrono_literals;
 
 CANBus::CANBus(std::string interface)
