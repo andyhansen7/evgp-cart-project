@@ -21,44 +21,70 @@ namespace evgp_project::vesc
     {
     public:
         VESC(std::shared_ptr<CANBus> canbus,
-             unsigned canID);
+             uint8_t canID);
 
         ~VESC();
 
-        unsigned long getPings() { return _pingCount; }
-        unsigned long getPongs() { return _pongCount; }
+        // Helper functions for getting the total number of pings sent to the controller, and the number of pongs it sent back
+        unsigned long getPings() const;
+        unsigned long getPongs() const;
+
+        // Getter methods for class members
+        float getRPM() const;
+        float getOutputCurrent() const;
+        float getDutyCycle() const;
+        float getTotalConsumedAmpHours() const;
+        float getTotalAmpHoursRecharged() const;
+        float getTotalConsumedWattHours() const;
+        float getTotalWattHoursRecharged() const;
+        float getMosfetTemperature() const;
+        float getMotorTemperature() const;
+        float getTotalFilteredMotorCurrent() const;
+        float getPIDPosition() const;
+        float getTachometerValue() const;
+        float getInputVoltage() const;
 
     private:
         std::shared_ptr<CANBus> _canbus;
-        const unsigned _canID;
+        const uint8_t _canID;
 
+        // Ping-pong
         std::atomic<bool> _pingPongThreadRunning;
         std::thread _pingPongThread;
         std::atomic<unsigned long> _pingCount;
         std::atomic<unsigned long> _pongCount;
 
+        // Status frame 1 members
+        mutable std::mutex _statusFrame1Mutex;
+        float _rpm;
+        float _current_A;
+        float _dutyCycle_percent;
+
+        // Status frame 2 members
+        mutable std::mutex _statusFrame2Mutex;
+        float _totalConsumedAmpHours;
+        float _totalRechargedAmpHours;
+
+        // Status frame 3 members
+        mutable std::mutex _statusFrame3Mutex;
+        float _totalConsumedWattHours;
+        float _totalRechargedWattHours;
+
+        // Status frame 4 members
+        mutable std::mutex _statusFrame4Mutex;
+        float _mosfetTemperature;
+        float _motorTemperature;
+        float _totalFilteredMotorCurrentA;  // TODO: what is this???
+        float _pidPosition;                 // And this
+
+        // Status frame 5 members
+        mutable std::mutex _statusFrame5Mutex;
+        float _tachometerValue;
+        float _inputVoltage;
+
+
         // Helper to run ping pong to the controller
         void pingPong();
-
-        // Helper for formatting data
-        static inline std::vector<uint8_t> unsigned4Bytes(const unsigned data)
-        {
-            std::vector<uint8_t> vec;
-            vec.resize(4);
-
-            vec[3] = (data >> 24) & 0xFF;
-            vec[2] = (data >> 16) & 0xFF;
-            vec[1] = (data >> 8) & 0xFF;
-            vec[0] = (data >> 0) & 0xFF;
-
-            return vec;
-        }
-
-        // Helper to build a CAN frame ID
-        static inline uint32_t buildCANExtendedID(const uint32_t frameID, const uint32_t deviceID)
-        {
-            return ((frameID << 8) | deviceID | CAN_EFF_FLAG);
-        }
     };
 }
 
