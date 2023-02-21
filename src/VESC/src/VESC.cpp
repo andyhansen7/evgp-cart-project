@@ -17,9 +17,11 @@ using namespace evgp_project::vesc;
 VESC::VESC(std::shared_ptr<can::CANBus> canbus, const uint8_t canID)
     : _canbus(std::move(canbus)),
       _canID(canID),
-      _pingPongThreadRunning(true),
+      _transmitThreadRunning(true),
       _pingCount(0),
       _pongCount(0),
+      _rpmTarget(0.0f),
+      _coast(true),
       _rpm(0.0f),
       _current_A(0.0f),
       _dutyCycle_percent(0.0f),
@@ -32,10 +34,7 @@ VESC::VESC(std::shared_ptr<can::CANBus> canbus, const uint8_t canID)
       _totalFilteredMotorCurrentA(0.0f),
       _pidPosition(0.0f),
       _tachometerValue(0.0f),
-      _inputVoltage(0.0f),
-      _useRPMTarget(false),
-      _rpmTarget(0.0f),
-      _pwmTarget(0.0f)
+      _inputVoltage(0.0f)
 {
     // Subscribe to pongs from controller
     _canbus->subscribeFrameID(vesc::buildCANExtendedID(vesc::CANMessages::Pong, 0), [this](const can_frame&)
@@ -170,43 +169,36 @@ VESC::VESC(std::shared_ptr<can::CANBus> canbus, const uint8_t canID)
         _inputVoltage = inputVoltage;
     });
 
-    _pingPongThread = std::thread([this](){ pingPong(); });
+    _transmitThread = std::thread([this](){ transmitMessages(); });
 }
 
 VESC::~VESC()
 {
-    _pingPongThreadRunning = false;
+    _transmitThreadRunning = false;
 
-    if(_pingPongThread.joinable())
-        _pingPongThread.join();
+    if(_transmitThread.joinable())
+        _transmitThread.join();
 }
 
-void VESC::terminate()
-{
-    _pingPongThreadRunning = true;
-}
-
-bool VESC::setPWM(float pwm)
-{
-    _pwmTarget = pwm;
-    _useRPMTarget = false;
-    return true;
-}
-
-bool VESC::setRPM(const float rpm)
+void VESC::setRPM(const float rpm)
 {
    _rpmTarget = rpm;
-   _useRPMTarget = true;
-   return true;
+   _coast = false;
 }
 
-bool VESC::setCurrentBrake(float amps) const
+void VESC::setCoast(const bool coast)
 {
-    auto data = static_cast<uint32_t>(amps * 1000.0f);
-//    const auto payload = buildCANFramePayload(0, 0, 0, 0, byte0(data), byte1(data), byte2(data), byte3(data));
+    _coast = coast;
+}
 
-//    return _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetCurrentBrakeA, _canID), payload);
-    return false;
+void VESC::setCurrentBrake(float amps) const
+{
+    // TODO move to transmit
+    auto data = static_cast<uint32_t>(amps * 1000.0f);
+    std::vector<uint8_t> payload;
+    buildCANFramePayload(payload, 0, 0, 0, 0, byte0(data), byte1(data), byte2(data), byte3(data));
+
+    _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetCurrentBrakeA, _canID), payload);
 }
 
 unsigned long VESC::getPings() const
@@ -297,40 +289,44 @@ float VESC::getInputVoltage() const
     return _inputVoltage;
 }
 
-void VESC::pingPong()
+void VESC::transmitMessages()
 {
     std::vector<uint8_t> payload;
     buildCANFramePayload(payload, 0, 0, 0, 0, 0, 0, 0, _canID);
 
-    while(_pingPongThreadRunning)
+    while(_transmitThreadRunning)
     {
         // Send ping
         _canbus->sendFrame(buildCANExtendedID(CANMessages::Ping, _canID), payload);
         _pingCount++;
 
         // Set RPM
-        if(_useRPMTarget)
+        const bool inCoast = _coast;
+        const bool useRPMSet = std::abs(_rpmTarget) > _usePWMInsteadOfRPMThreshold;
+
+        if(!inCoast)
         {
-            auto data = static_cast<int>(_rpmTarget);
+            if(useRPMSet)
+            {
+                auto data = static_cast<int>(_rpmTarget);
 
-            std::vector<uint8_t> rpmPayload;
-            buildCANFramePayload(rpmPayload, 0, 0, 0, 0, byte0((unsigned)data), byte1((unsigned)data), byte2((unsigned)data), byte3((unsigned)data));
+                buildCANFramePayload(payload, 0, 0, 0, 0, byte0((unsigned)data), byte1((unsigned)data), byte2((unsigned)data), byte3((unsigned)data));
 
-            _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetRPM, _canID), rpmPayload);
-        }
-        else
-        {
-            float correctedPWM = _pwmTarget;
+                _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetRPM, _canID), payload);
+            }
+            else
+            {
+                float pwmTarget = _rpmTarget * _rpmToPWMFactor;
 
-            if(correctedPWM < -1.0f) correctedPWM = -1.0f;
-            if(correctedPWM > 1.0f) correctedPWM = 1.0f;
+                if(pwmTarget < -1.0f) pwmTarget = -1.0f;
+                if(pwmTarget > 1.0f) pwmTarget = 1.0f;
 
-            auto data = static_cast<int>(correctedPWM * 100000.0);
+                auto data = static_cast<int>(pwmTarget * 100000.0);
 
-            std::vector<uint8_t> pwmPayload;
-            buildCANFramePayload(pwmPayload, 0, 0, 0, 0, byte0((unsigned)data), byte1((unsigned)data), byte2((unsigned)data), byte3((unsigned)data));
+                buildCANFramePayload(payload, 0, 0, 0, 0, byte0((unsigned)data), byte1((unsigned)data), byte2((unsigned)data), byte3((unsigned)data));
 
-            _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetDutyPercent, _canID), pwmPayload);
+                _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetDutyPercent, _canID), payload);
+            }
         }
 
         // Delay

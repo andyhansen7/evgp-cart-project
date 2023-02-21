@@ -25,16 +25,14 @@ namespace evgp_project::vesc
 
         ~VESC();
 
-        void terminate();
-
-        // Set the speed of the motor as PWM [-1, 1]
-        [[maybe_unused]] bool setPWM(float pwm);
-
         // Set the speed of the motor in rpm
-        [[maybe_unused]] bool setRPM(float rpm);
+        [[maybe_unused]] void setRPM(float rpm);
+
+        // Set the motor to coast mode
+        [[maybe_unused]] void setCoast(bool coast = true);
 
         // Set the current brake in amps
-        [[maybe_unused]] bool setCurrentBrake(float amps) const;
+        [[maybe_unused]] void setCurrentBrake(float amps) const;
 
         // Helper functions for getting the total number of pings sent to the controller, and the number of pongs it sent back
         [[maybe_unused]] unsigned long getPings() const;
@@ -56,14 +54,25 @@ namespace evgp_project::vesc
         [[maybe_unused]] float getInputVoltage() const;
 
     private:
+        // CAN
         std::shared_ptr<can::CANBus> _canbus;
         const uint8_t _canID;
 
+        // Constants
+        static constexpr float _usePWMInsteadOfRPMThreshold = 1000.0f;
+        static constexpr float _rpmToPWMFactor = (100.0f / _usePWMInsteadOfRPMThreshold) * 0.15f;  // 0.15 is approximate PWM when RPM=1000
+
+        // Thread
+        std::atomic<bool> _transmitThreadRunning;
+        std::thread _transmitThread;
+
         // Ping-pong
-        std::atomic<bool> _pingPongThreadRunning;
-        std::thread _pingPongThread;
         std::atomic<unsigned long> _pingCount;
         std::atomic<unsigned long> _pongCount;
+
+        // Speed control
+        std::atomic<float> _rpmTarget;
+        std::atomic<bool> _coast;
 
         // Status frame 1 members
         mutable std::mutex _statusFrame1Mutex;
@@ -93,12 +102,8 @@ namespace evgp_project::vesc
         float _tachometerValue;
         float _inputVoltage;
 
-        // Helper to run ping pong to the controller
-        void pingPong();
-
-        std::atomic<bool> _useRPMTarget;
-        std::atomic<float> _rpmTarget;
-        std::atomic<float> _pwmTarget;
+        // Helper to run transmissions to the controller
+        void transmitMessages();
     };
 }
 

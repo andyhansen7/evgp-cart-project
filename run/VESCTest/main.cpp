@@ -6,9 +6,6 @@
 #include <VESC/src/VESC.h>
 #include <GUI/src/SimpleGUI.h>
 
-#include "VESC/src/CANMessages.h"
-#include "VESC/src/CANUtils.h"
-
 // STL
 #include <memory>
 #include <atomic>
@@ -22,7 +19,6 @@ std::shared_ptr<vesc::VESC> controller;
 
 void handler(int)
 {
-    controller->terminate();
     interrupted = true;
     throw std::runtime_error("Killed.");
 }
@@ -45,14 +41,6 @@ int main()
     float rpmIncrement = 100.0f;
     float rpmMax = 5000.0f;
     float rpmMin = -5000.0f;
-
-    gui::GUIEntry setPWM = {
-        .name = "PWM Target",
-        .precision = 6,
-        .value = [&]() {
-            return pwmTarget;
-        }
-    };
 
     gui::GUIEntry setRPM = {
         .name = "RPM Target",
@@ -159,34 +147,6 @@ int main()
         }
     };
 
-    gui::KeybindEntry increasePWM = {
-        .key = 'q',
-        .description = "Increase PWM",
-        .callback = [&]()
-        {
-            pwmTarget += pwmIncrement;
-
-            if(pwmTarget > pwmMax)
-                pwmTarget = pwmMax;
-
-            controller->setPWM(pwmTarget);
-        }
-    };
-
-    gui::KeybindEntry decreasePWM = {
-        .key = 'a',
-        .description = "Decrease PWM",
-        .callback = [&]()
-        {
-            pwmTarget -= pwmIncrement;
-
-            if(pwmTarget < pwmMin)
-                pwmTarget = pwmMin;
-
-            controller->setPWM(pwmTarget);
-        }
-    };
-
     gui::KeybindEntry increaseRPM = {
         .key = 'w',
         .description = "Increase RPM",
@@ -215,8 +175,7 @@ int main()
         }
     };
 
-    const std::vector<gui::GUIEntry> entries = {setPWM,
-                                                setRPM,
+    const std::vector<gui::GUIEntry> entries = {setRPM,
                                                 responseRate,
                                                 rpm,
                                                 dutyPercent,
@@ -230,8 +189,6 @@ int main()
                                                 voltage};
 
     const std::vector<gui::KeybindEntry> keybinds = {eStop,
-                                                     increasePWM,
-                                                     decreasePWM,
                                                      increaseRPM,
                                                      decreaseRPM};
 
