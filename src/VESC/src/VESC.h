@@ -25,11 +25,13 @@ namespace evgp_project::vesc
 
         ~VESC();
 
+        void terminate();
+
         // Set the speed of the motor as PWM [-1, 1]
-        [[maybe_unused]] bool setPWM(float pwm) const;
+        [[maybe_unused]] bool setPWM(float pwm);
 
         // Set the speed of the motor in rpm
-        [[maybe_unused]] bool setRPM(float rpm) const;
+        [[maybe_unused]] bool setRPM(float rpm);
 
         // Set the current brake in amps
         [[maybe_unused]] bool setCurrentBrake(float amps) const;
@@ -93,6 +95,10 @@ namespace evgp_project::vesc
 
         // Helper to run ping pong to the controller
         void pingPong();
+
+        std::atomic<bool> _useRPMTarget;
+        std::atomic<float> _rpmTarget;
+        std::atomic<float> _pwmTarget;
     };
 }
 

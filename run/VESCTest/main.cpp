@@ -6,6 +6,9 @@
 #include <VESC/src/VESC.h>
 #include <GUI/src/SimpleGUI.h>
 
+#include "VESC/src/CANMessages.h"
+#include "VESC/src/CANUtils.h"
+
 // STL
 #include <memory>
 #include <atomic>
@@ -15,10 +18,13 @@
 using namespace evgp_project;
 
 std::atomic<bool> interrupted = false;
+std::shared_ptr<vesc::VESC> controller;
 
 void handler(int)
 {
+    controller->terminate();
     interrupted = true;
+    throw std::runtime_error("Killed.");
 }
 
 int main()
@@ -28,17 +34,17 @@ int main()
     static constexpr unsigned vescID = 48;
 
     const auto bus = std::make_shared<can::CANBus>("can0");
-    const auto vesc = std::make_shared<vesc::VESC>(bus, vescID);
+    controller = std::make_shared<vesc::VESC>(bus, vescID);
 
     float pwmTarget = 0.0f;
-    const float pwmIncrement = 0.1f;
+    const float pwmIncrement = 0.05f;
     const float pwmMax = 1.0f;
     const float pwmMin = -1.0f;
 
     float rpmTarget = 0.0f;
     float rpmIncrement = 100.0f;
-    float rpmMax = 1000.0f;
-    float rpmMin = -1000.0f;
+    float rpmMax = 5000.0f;
+    float rpmMin = -5000.0f;
 
     gui::GUIEntry setPWM = {
         .name = "PWM Target",
@@ -60,7 +66,7 @@ int main()
         .name = "Response (%)",
         .precision = 6,
         .value = [&]() {
-            return static_cast<float>(vesc->getPongs()) / static_cast<float>(vesc->getPings());
+            return static_cast<float>(controller->getPongs()) / static_cast<float>(controller->getPings());
         }
     };
 
@@ -68,7 +74,7 @@ int main()
         .name = "RPM",
         .precision = 6,
         .value = [&]() {
-            return vesc->getRPM();
+            return controller->getRPM();
         }
     };
 
@@ -76,7 +82,7 @@ int main()
         .name = "Duty (%)",
         .precision = 6,
         .value = [&]() {
-            return vesc->getDutyCycle();
+            return controller->getDutyCycle();
         }
     };
 
@@ -84,7 +90,7 @@ int main()
         .name = "Current (A)",
         .precision = 6,
         .value = [&]() {
-            return vesc->getOutputCurrent();
+            return controller->getOutputCurrent();
         }
     };
 
@@ -92,7 +98,7 @@ int main()
         .name = "Total Power (AH)",
         .precision = 6,
         .value = [&]() {
-            return vesc->getTotalConsumedAmpHours();
+            return controller->getTotalConsumedAmpHours();
         }
     };
 
@@ -100,7 +106,7 @@ int main()
         .name = "Total Power (WH)",
         .precision = 6,
         .value = [&]() {
-            return vesc->getTotalConsumedWattHours();
+            return controller->getTotalConsumedWattHours();
         }
     };
 
@@ -108,7 +114,7 @@ int main()
         .name = "Total Charged (AH)",
         .precision = 6,
         .value = [&]() {
-            return vesc->getTotalAmpHoursRecharged();
+            return controller->getTotalAmpHoursRecharged();
         }
     };
 
@@ -116,7 +122,7 @@ int main()
         .name = "Total Charged (WH)",
         .precision = 6,
         .value = [&]() {
-            return vesc->getTotalWattHoursRecharged();
+            return controller->getTotalWattHoursRecharged();
         }
     };
 
@@ -124,7 +130,7 @@ int main()
         .name = "MOSFET Temp",
         .precision = 6,
         .value = [&]() {
-            return vesc->getMosfetTemperature();
+            return controller->getMosfetTemperature();
         }
     };
 
@@ -132,7 +138,7 @@ int main()
         .name = "Motor Temp",
         .precision = 6,
         .value = [&]() {
-            return vesc->getMotorTemperature();
+            return controller->getMotorTemperature();
         }
     };
 
@@ -140,7 +146,7 @@ int main()
         .name = "Input Voltage",
         .precision = 6,
         .value = [&]() {
-            return vesc->getInputVoltage();
+            return controller->getInputVoltage();
         }
     };
 
@@ -149,7 +155,7 @@ int main()
         .description = "Emergency stop",
         .callback = [&]()
         {
-            vesc->setRPM(0.0f);
+            controller->setRPM(0.0f);
         }
     };
 
@@ -163,7 +169,7 @@ int main()
             if(pwmTarget > pwmMax)
                 pwmTarget = pwmMax;
 
-            vesc->setPWM(pwmTarget);
+            controller->setPWM(pwmTarget);
         }
     };
 
@@ -177,7 +183,7 @@ int main()
             if(pwmTarget < pwmMin)
                 pwmTarget = pwmMin;
 
-            vesc->setPWM(pwmTarget);
+            controller->setPWM(pwmTarget);
         }
     };
 
@@ -191,7 +197,7 @@ int main()
             if(rpmTarget > rpmMax)
                 rpmTarget = rpmMax;
 
-            vesc->setRPM(rpmTarget);
+            controller->setRPM(rpmTarget);
         }
     };
 
@@ -205,12 +211,13 @@ int main()
             if(rpmTarget < rpmMin)
                 rpmTarget = rpmMin;
 
-            vesc->setRPM(rpmTarget);
+            controller->setRPM(rpmTarget);
         }
     };
 
     const std::vector<gui::GUIEntry> entries = {setPWM,
                                                 setRPM,
+                                                responseRate,
                                                 rpm,
                                                 dutyPercent,
                                                 current,

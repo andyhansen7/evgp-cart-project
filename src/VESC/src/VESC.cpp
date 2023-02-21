@@ -9,6 +9,7 @@
 
 // STL
 #include <utility>
+#include <iostream>
 
 using namespace evgp_project::vesc;
 
@@ -31,7 +32,10 @@ VESC::VESC(std::shared_ptr<can::CANBus> canbus, const uint8_t canID)
       _totalFilteredMotorCurrentA(0.0f),
       _pidPosition(0.0f),
       _tachometerValue(0.0f),
-      _inputVoltage(0.0f)
+      _inputVoltage(0.0f),
+      _useRPMTarget(false),
+      _rpmTarget(0.0f),
+      _pwmTarget(0.0f)
 {
     // Subscribe to pongs from controller
     _canbus->subscribeFrameID(vesc::buildCANExtendedID(vesc::CANMessages::Pong, 0), [this](const can_frame&)
@@ -177,33 +181,32 @@ VESC::~VESC()
         _pingPongThread.join();
 }
 
-bool VESC::setPWM(float pwm) const
+void VESC::terminate()
 {
-    float correctedPWM = pwm;
-
-    if(correctedPWM < -1.0f) correctedPWM = -1.0f;
-    if(correctedPWM > 1.0f) correctedPWM = 1.0f;
-
-    auto data = static_cast<int>(correctedPWM * 100000.0);
-    const auto payload = buildCANFramePayload(0, 0, 0, 0, byte0((unsigned)data), byte1((unsigned)data), byte2((unsigned)data), byte3((unsigned)data));
-
-    return _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetDutyPercent, _canID), payload);
+    _pingPongThreadRunning = true;
 }
 
-bool VESC::setRPM(const float rpm) const
+bool VESC::setPWM(float pwm)
 {
-    auto data = static_cast<int>(rpm);
-    const auto payload = buildCANFramePayload(0, 0, 0, 0, byte0((unsigned)data), byte1((unsigned)data), byte2((unsigned)data), byte3((unsigned)data));
+    _pwmTarget = pwm;
+    _useRPMTarget = false;
+    return true;
+}
 
-    return _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetRPM, _canID), payload);
+bool VESC::setRPM(const float rpm)
+{
+   _rpmTarget = rpm;
+   _useRPMTarget = true;
+   return true;
 }
 
 bool VESC::setCurrentBrake(float amps) const
 {
     auto data = static_cast<uint32_t>(amps * 1000.0f);
-    const auto payload = buildCANFramePayload(0, 0, 0, 0, byte0(data), byte1(data), byte2(data), byte3(data));
+//    const auto payload = buildCANFramePayload(0, 0, 0, 0, byte0(data), byte1(data), byte2(data), byte3(data));
 
-    return _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetCurrentBrakeA, _canID), payload);
+//    return _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetCurrentBrakeA, _canID), payload);
+    return false;
 }
 
 unsigned long VESC::getPings() const
@@ -296,14 +299,41 @@ float VESC::getInputVoltage() const
 
 void VESC::pingPong()
 {
+    std::vector<uint8_t> payload;
+    buildCANFramePayload(payload, 0, 0, 0, 0, 0, 0, 0, _canID);
+
     while(_pingPongThreadRunning)
     {
         // Send ping
-        _canbus->sendFrame(buildCANExtendedID(CANMessages::Ping, _canID),
-                           buildCANFramePayload(0, 0, 0, 0, 0, 0, 0, _canID));
+        _canbus->sendFrame(buildCANExtendedID(CANMessages::Ping, _canID), payload);
         _pingCount++;
 
+        // Set RPM
+        if(_useRPMTarget)
+        {
+            auto data = static_cast<int>(_rpmTarget);
+
+            std::vector<uint8_t> rpmPayload;
+            buildCANFramePayload(rpmPayload, 0, 0, 0, 0, byte0((unsigned)data), byte1((unsigned)data), byte2((unsigned)data), byte3((unsigned)data));
+
+            _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetRPM, _canID), rpmPayload);
+        }
+        else
+        {
+            float correctedPWM = _pwmTarget;
+
+            if(correctedPWM < -1.0f) correctedPWM = -1.0f;
+            if(correctedPWM > 1.0f) correctedPWM = 1.0f;
+
+            auto data = static_cast<int>(correctedPWM * 100000.0);
+
+            std::vector<uint8_t> pwmPayload;
+            buildCANFramePayload(pwmPayload, 0, 0, 0, 0, byte0((unsigned)data), byte1((unsigned)data), byte2((unsigned)data), byte3((unsigned)data));
+
+            _canbus->sendFrame(vesc::buildCANExtendedID(vesc::CANMessages::SetDutyPercent, _canID), pwmPayload);
+        }
+
         // Delay
-        std::this_thread::sleep_for(std::chrono::milliseconds(25));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 }

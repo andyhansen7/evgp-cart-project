@@ -30,16 +30,16 @@ namespace evgp_project::vesc
      * @param byte0-7 data as a set of bytes
      * @return a vector of length 8 containing the provided data
      */
-    [[maybe_unused]] static std::vector<uint8_t> buildCANFramePayload(const uint8_t byte7,
-                                                                      const uint8_t byte6,
-                                                                      const uint8_t byte5,
-                                                                      const uint8_t byte4,
-                                                                      const uint8_t byte3,
-                                                                      const uint8_t byte2,
-                                                                      const uint8_t byte1,
-                                                                      const uint8_t byte0)
+    [[maybe_unused]] static void buildCANFramePayload(std::vector<uint8_t>& vec,
+                                                      const uint8_t byte7,
+                                                      const uint8_t byte6,
+                                                      const uint8_t byte5,
+                                                      const uint8_t byte4,
+                                                      const uint8_t byte3,
+                                                      const uint8_t byte2,
+                                                      const uint8_t byte1,
+                                                      const uint8_t byte0)
     {
-        std::vector<uint8_t> vec;
         vec.resize(8);
 
         vec[0] = byte0;
@@ -50,16 +50,14 @@ namespace evgp_project::vesc
         vec[5] = byte5;
         vec[6] = byte6;
         vec[7] = byte7;
-
-        return vec;
     }
 
     /** Helper methods to apply bit masks so that they do not have to be done manually.
      */
-    [[maybe_unused]] static inline uint8_t byte0(const uint32_t data) { return data & 0xF; }
-    [[maybe_unused]] static inline uint8_t byte1(const uint32_t data) { return (data >> 8) & 0xF; }
-    [[maybe_unused]] static inline uint8_t byte2(const uint32_t data) { return (data >> 16) & 0xF; }
-    [[maybe_unused]] static inline uint8_t byte3(const uint32_t data) { return (data >> 24) & 0xF; }
+    [[maybe_unused]] static inline uint8_t byte0(const uint32_t data) { return data & 0xFF; }
+    [[maybe_unused]] static inline uint8_t byte1(const uint32_t data) { return (data >> 8) & 0xFF; }
+    [[maybe_unused]] static inline uint8_t byte2(const uint32_t data) { return (data >> 16) & 0xFF; }
+    [[maybe_unused]] static inline uint8_t byte3(const uint32_t data) { return (data >> 24) & 0xFF; }
 
     /** Helper function to apply a fixed multiplier to a value, used by the VESC to
      *  emulate the functionality of floating-point values without actually serializing
